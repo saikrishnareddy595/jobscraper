@@ -30,8 +30,8 @@ _RETRY_DELAY = 2  # seconds
 
 class TelegramBot:
     def __init__(self):
-        self._token = config.TELEGRAM_BOT_TOKEN
-        self._chat_id = config.TELEGRAM_CHAT_ID
+        self._token = (config.TELEGRAM_BOT_TOKEN or "").strip()
+        self._chat_id = (config.TELEGRAM_CHAT_ID or "").strip()
         self._enabled = bool(self._token and self._chat_id)
         if not self._enabled:
             logger.info("Telegram: not configured (set TELEGRAM_BOT_TOKEN + TELEGRAM_CHAT_ID)")
