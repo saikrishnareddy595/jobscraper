@@ -72,7 +72,6 @@ from storage.db              import Database
 from storage.supabase_client import SupabaseClient
 from output.sheets           import SheetsSync
 from output.notifier         import Notifier
-from output.telegram_bot     import TelegramBot
 
 
 def _run_scraper(name: str, scraper_instance) -> Tuple[str, List[Dict[str, Any]]]:
@@ -89,19 +88,6 @@ def _run_scraper(name: str, scraper_instance) -> Tuple[str, List[Dict[str, Any]]
 def _build_tasks() -> List[Tuple[str, object]]:
     """
     Build the full list of (label, scraper_instance) tasks.
-
-    JobSpy is split into one task per title so each title runs as an
-    independent parallel job — previously they ran sequentially inside
-    a single task, causing the 30-minute timeout.
-
-    Scrapers removed because they consistently returned 0 results in CI
-    (404 / 403 / DNS errors / bot protection):
-      CareerBuilder, BuiltIn, TechFetch, ClearanceJobs, Wellfound,
-      Monster, RemoteOK, TheMuse, TEKsystems, Kforce, RobertHalf,
-      Randstad, InsightGlobal, ApexSystems, MotionRecruitment,
-      CyberCoders, Akkodis, Volt, HarveyNash, HaysTech, LanceSoft,
-      Staffmark, Cognizant, Infosys, SAIC, Leidos, BoozAllen,
-      Accenture, Capgemini, IBM
     """
     tasks: List[Tuple[str, object]] = []
 
@@ -121,8 +107,6 @@ def _build_tasks() -> List[Tuple[str, object]]:
         ("Adzuna",         AdzunaScraper()),
         ("WeWorkRemotely", WeWorkRemotelyScraper()),
         ("Jooble",         JoobleScraper()),
-        # Staffing — BeaconHill was the only portal returning results
-
         ("BeaconHill",     BeaconHillScraper()),
     ]
 
@@ -173,7 +157,7 @@ def run() -> None:
 
     # ── Step 5: LLM Enrichment (NVIDIA NIM) ──────────────────────────────────
     if config.LLM_ENABLED:
-        scored_jobs = llm_score_batch(scored_jobs, max_jobs=150)
+        scored_jobs = llm_score_batch(scored_jobs, max_jobs=500)
 
     # ── Step 6: Save ──────────────────────────────────────────────────────────
     db        = Database()
@@ -206,33 +190,6 @@ def run() -> None:
 
     db.close()
 
-    # ── Phase 2 Step 10: Telegram — Job Alerts ───────────────────────────────
-    telegram = TelegramBot()
-    tg_job_count  = 0
-    tg_post_count = 0
-
-    if config.ENABLE_TELEGRAM_JOBS:
-        new_high_score = [j for j in high_score if not j.get("notified", False)]
-        tg_job_count   = telegram.send_job_alerts(new_high_score)
-        logger.info("Telegram: %d job alerts sent", tg_job_count)
-
-    # ── Phase 2 Step 11: Telegram — LinkedIn Recruiter Posts (with emails) ────
-    if config.ENABLE_TELEGRAM_POSTS and posts:
-        posts_to_send = [
-            p for p in posts
-            if p.get("score", 0) >= config.TELEGRAM_MIN_POST_SCORE
-        ]
-        tg_post_count = telegram.send_recruiter_posts(posts_to_send)
-        logger.info("Telegram: %d LinkedIn recruiter posts sent", tg_post_count)
-
-    # ── Phase 2 Step 12: Run summary digest to Telegram ────────────────────
-    telegram.send_digest_summary(
-        total_raw=len(all_jobs),
-        total_after_filter=len(filtered_jobs),
-        new_in_db=new_count,
-        top_jobs=scored_jobs[:5],
-    )
-
     # ── Phase 2 Step 13: Skill Gap Analysis ───────────────────────────────
     gap_report: Dict[str, Any] = {}
     if config.ENABLE_SKILL_GAP:
@@ -260,8 +217,6 @@ def run() -> None:
     print(f"  {'New in SQLite':<22} {new_count:>6}")
     print(f"  {'Sheets rows':<22} {rows_written:>6}")
     print(f"  {'LinkedIn Posts':<22} {len(posts):>6}")
-    print(f"  {'Telegram Jobs':<22} {tg_job_count:>6}")
-    print(f"  {'Telegram Posts':<22} {tg_post_count:>6}")
     print()
     print(f"  TOP 10 JOBS:")
     print(f"  {'Sc':>3} {'LLM':>3}  {'Title':<35} {'Company':<20} {'Type':<10}")

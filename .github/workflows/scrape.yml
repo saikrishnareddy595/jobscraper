@@ -61,8 +61,6 @@ jobs:
           USAJOBS_API_KEY:          ${{ secrets.USAJOBS_API_KEY }}
           ALERT_EMAIL_TO:           ${{ secrets.ALERT_EMAIL_TO }}
           GOOGLE_SPREADSHEET_ID:    ${{ secrets.GOOGLE_SPREADSHEET_ID }}
-          TELEGRAM_BOT_TOKEN:       ${{ secrets.TELEGRAM_BOT_TOKEN }}
-          TELEGRAM_CHAT_ID:         ${{ secrets.TELEGRAM_CHAT_ID }}
         run: |
           # Use printf to safely write variables even if they contain special characters
           printf "GMAIL_ADDRESS=%s\n" "$GMAIL_ADDRESS" > .env
@@ -78,14 +76,10 @@ jobs:
           printf "USAJOBS_API_KEY=%s\n" "$USAJOBS_API_KEY" >> .env
           printf "ALERT_EMAIL_TO=%s\n" "$ALERT_EMAIL_TO" >> .env
           printf "GOOGLE_SPREADSHEET_ID=%s\n" "$GOOGLE_SPREADSHEET_ID" >> .env
-          printf "TELEGRAM_BOT_TOKEN=%s\n" "$TELEGRAM_BOT_TOKEN" >> .env
-          printf "TELEGRAM_CHAT_ID=%s\n" "$TELEGRAM_CHAT_ID" >> .env
 
       - name: Secrets Health Check
         run: |
           echo "Checking configuration (Masked values)..."
-          [ -z "${{ secrets.TELEGRAM_BOT_TOKEN }}" ] && echo "❌ TELEGRAM_BOT_TOKEN is MISSING" || echo "✅ TELEGRAM_BOT_TOKEN is set"
-          [ -z "${{ secrets.TELEGRAM_CHAT_ID }}" ] && echo "❌ TELEGRAM_CHAT_ID is MISSING" || echo "✅ TELEGRAM_CHAT_ID is set"
           [ -z "${{ secrets.NVIDIA_API_KEY }}" ] && echo "❌ NVIDIA_API_KEY is MISSING" || echo "✅ NVIDIA_API_KEY is set"
           [ -z "${{ secrets.SUPABASE_URL }}" ] && echo "❌ SUPABASE_URL is MISSING" || echo "✅ SUPABASE_URL is set"
 

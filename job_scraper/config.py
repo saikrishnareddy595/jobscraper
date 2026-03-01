@@ -86,7 +86,7 @@ JOBSPY_TITLES: list = [
 LOCATIONS = ["United States", "Remote USA", "Remote"]
 
 MIN_SALARY      = 80_000   # USD / year
-MAX_JOB_AGE_HOURS = 48
+MAX_JOB_AGE_HOURS = 168
 MAX_APPLICANTS  = 200      # filter out saturated postings
 
 EASY_APPLY_ONLY = False    # include all application types
@@ -152,22 +152,12 @@ USAJOBS_API_KEY = os.getenv("USAJOBS_API_KEY", "")    # free at usajobs.gov
 LINKEDIN_EMAIL    = os.getenv("LINKEDIN_EMAIL", "")
 LINKEDIN_PASSWORD = os.getenv("LINKEDIN_PASSWORD", "")
 
-# ── Telegram Bot (Phase 2 — instant alerts) ────────────────────────────────────
-# Setup: @BotFather on Telegram → /newbot → copy token
-# Then message your bot and visit:
-#   https://api.telegram.org/bot<TOKEN>/getUpdates  to get your chat_id
-TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "")
-TELEGRAM_CHAT_ID   = os.getenv("TELEGRAM_CHAT_ID", "")
-
 # ── Resume (Phase 2 — cover letter + skill gap analysis) ──────────────────────
 # Set to the absolute path of your resume file (.pdf or .txt)
 RESUME_PATH = os.getenv("RESUME_PATH", "")
 
 # ── Phase 2 Feature Flags ──────────────────────────────────────────────────────
 ENABLE_HN_SCRAPER        = True   # Hacker News Who's Hiring thread
-ENABLE_TELEGRAM_JOBS     = True   # Send high-score job alerts to Telegram
-ENABLE_TELEGRAM_POSTS    = True   # Send LinkedIn recruiter posts to Telegram
-TELEGRAM_MIN_POST_SCORE  = 40    # Only send LinkedIn posts above this score
 ENABLE_SKILL_GAP         = True   # Run skill gap analysis after each run
 ENABLE_COVER_LETTER      = False  # Auto-generate cover letters (requires LLM)
 
