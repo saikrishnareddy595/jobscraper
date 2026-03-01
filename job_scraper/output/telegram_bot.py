@@ -216,9 +216,15 @@ class TelegramBot:
                 if data.get("ok"):
                     return True
                 
-                # Handle 404 specially as it indicates a bad token
+                # Handle 401 specially (Unauthorized)
+                if resp.status_code == 401:
+                    logger.error("Telegram: 401 Unauthorized. Your TELEGRAM_BOT_TOKEN is invalid or has been revoked by @BotFather.")
+                    self._enabled = False
+                    return False
+
+                # Handle 404 specially (Bad Token/URL)
                 if resp.status_code == 404:
-                    logger.error("Telegram: Bot API returned 404. This usually means your TELEGRAM_BOT_TOKEN is incorrect.")
+                    logger.error("Telegram: 404 Not Found. This usually means the Bot Token is formatted incorrectly or contains a typo.")
                     self._enabled = False
                     return False
 
