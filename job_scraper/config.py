@@ -87,7 +87,7 @@ LOCATIONS = ["United States", "Remote USA", "Remote"]
 
 MIN_SALARY      = 80_000   # USD / year
 MAX_JOB_AGE_HOURS = 168
-MAX_APPLICANTS  = 200      # filter out saturated postings
+MAX_APPLICANTS  = 100      # filter out saturated postings
 
 EASY_APPLY_ONLY = False    # include all application types
 
