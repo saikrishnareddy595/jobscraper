@@ -68,10 +68,14 @@ from engine.filter       import Filter
 from engine.llm          import llm_score_batch
 from engine.resume       import parse_resume, skill_gap_analysis
 
+from modules.recruiter_discovery.recruiter_engine import RecruiterEngine
+from modules.outreach_generator.outreach_engine import OutreachEngine
+
 from storage.db              import Database
 from storage.supabase_client import SupabaseClient
 from output.sheets           import SheetsSync
 from output.notifier         import Notifier
+from output.excel_export     import ExcelExporter
 
 
 def _run_scraper(name: str, scraper_instance) -> Tuple[str, List[Dict[str, Any]]]:
@@ -159,7 +163,39 @@ def run() -> None:
     if config.LLM_ENABLED:
         scored_jobs = llm_score_batch(scored_jobs, max_jobs=500)
 
-    # ── Step 6: Save ──────────────────────────────────────────────────────────
+    # ── Step 6: Recruiter Discovery (async, non-blocking) ───────────────────
+    recruiter_counts: dict = {}
+    recruiter_engine = RecruiterEngine()
+    if config.ENABLE_RECRUITER_DISCOVERY and scored_jobs:
+        # Prioritise top-scoring jobs so the best opportunities get coverage first
+        cap = config.RECRUITER_MAX_JOBS or len(scored_jobs)
+        discovery_jobs = scored_jobs[:cap]
+        logger.info(
+            "Recruiter discovery: running on top %d jobs (%d workers) …",
+            len(discovery_jobs), config.RECRUITER_WORKERS,
+        )
+        try:
+            recruiter_counts = recruiter_engine.run_for_jobs(
+                discovery_jobs, max_workers=config.RECRUITER_WORKERS
+            )
+        except Exception as exc:
+            logger.error("Recruiter discovery failed: %s", exc)
+    else:
+        logger.info("Recruiter discovery disabled or no jobs to process")
+
+    # ── Step 6.5: Outreach Generator ──────────────────────────────────────────
+    outreach_counts = 0
+    outreach_engine = OutreachEngine()
+    if getattr(config, "ENABLE_OUTREACH_GENERATOR", False) and recruiter_counts:
+        logger.info(f"Outreach generation: running on discovered recruiters (tone='{getattr(config, 'OUTREACH_TONE', 'professional')}')")
+        try:
+            outreach_counts = outreach_engine.run_batch(
+                discovery_jobs, recruiter_counts, max_workers=config.RECRUITER_WORKERS
+            )
+        except Exception as exc:
+            logger.error(f"Outreach generation failed: {exc}")
+
+    # ── Step 7: Save ──────────────────────────────────────────────────────────
     db        = Database()
     new_count = db.upsert_jobs(scored_jobs)
     logger.info("SQLite: %d new jobs saved", new_count)
@@ -188,7 +224,18 @@ def run() -> None:
         supabase.upsert_posts(posts)
         logger.info("LinkedIn Posts: %d posts pushed to Supabase", len(posts))
 
+    # ── Step 10: Excel Export ─────────────────────────────────────────────────
+    excel_path: str = ""
+    try:
+        excel_path = ExcelExporter().export(scored_jobs, recruiter_counts) or ""
+        if excel_path:
+            logger.info("Excel export: %s", excel_path)
+    except Exception as exc:
+        logger.error("Excel export failed: %s", exc)
+
     db.close()
+    recruiter_engine.close()
+    outreach_engine.close()
 
     # ── Phase 2 Step 13: Skill Gap Analysis ───────────────────────────────
     gap_report: Dict[str, Any] = {}
@@ -216,7 +263,12 @@ def run() -> None:
     print(f"  {'After filter':<22} {len(filtered_jobs):>6}")
     print(f"  {'New in SQLite':<22} {new_count:>6}")
     print(f"  {'Sheets rows':<22} {rows_written:>6}")
+    total_recruiters = sum(len(v) for v in recruiter_counts.values())
+    print(f"  {'Recruiters found':<22} {total_recruiters:>6}")
+    print(f"  {'Outreach msgs gen':<22} {outreach_counts:>6}")
     print(f"  {'LinkedIn Posts':<22} {len(posts):>6}")
+    if excel_path:
+        print(f"  {'Excel Export':<22} {os.path.basename(excel_path)}")
     print()
     print(f"  TOP 10 JOBS:")
     print(f"  {'Sc':>3} {'LLM':>3}  {'Title':<35} {'Company':<20} {'Type':<10}")

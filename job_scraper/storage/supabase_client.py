@@ -80,6 +80,26 @@ CREATE TABLE IF NOT EXISTS job_feedback (
     UNIQUE(job_id, source_table)
 );
 CREATE INDEX IF NOT EXISTS idx_feedback_job ON job_feedback(job_id);
+
+-- Recruiter Discovery tables
+CREATE TABLE IF NOT EXISTS recruiters (
+    id              BIGSERIAL PRIMARY KEY,
+    fingerprint     TEXT      UNIQUE NOT NULL,
+    name            TEXT      NOT NULL,
+    title           TEXT,
+    company         TEXT,
+    linkedin_url    TEXT,
+    email           TEXT,
+    location        TEXT,
+    source          TEXT      DEFAULT 'linkedin_search',
+    job_url         TEXT,
+    confidence_score INTEGER  DEFAULT 0,
+    created_at      TIMESTAMPTZ DEFAULT NOW(),
+    updated_at      TIMESTAMPTZ DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_rec_fingerprint ON recruiters(fingerprint);
+CREATE INDEX IF NOT EXISTS idx_rec_company     ON recruiters(company);
+CREATE INDEX IF NOT EXISTS idx_rec_linkedin    ON recruiters(linkedin_url);
 """
 
 

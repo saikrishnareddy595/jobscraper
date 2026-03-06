@@ -9,6 +9,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # ── Role Categories ────────────────────────────────────────────────────────────
+# Only Data Engineering roles are targeted — all ML/AI/NLP/CV/DS categories removed.
 ROLE_CATEGORIES = {
     "data_engineer": [
         "Data Engineer",
@@ -19,39 +20,13 @@ ROLE_CATEGORIES = {
         "Data Platform Engineer",
         "Data Infrastructure Engineer",
         "Big Data Engineer",
-    ],
-    "ai_engineer": [
-        "AI Engineer",
-        "Artificial Intelligence Engineer",
-        "LLM Engineer",
-        "Generative AI Engineer",
-        "Prompt Engineer",
-        "AI/ML Engineer",
-    ],
-    "ml_engineer": [
-        "Machine Learning Engineer",
-        "ML Engineer",
-        "MLOps Engineer",
-        "ML Platform Engineer",
-        "Applied ML Engineer",
-        "Deep Learning Engineer",
-    ],
-    "nlp_engineer": [
-        "NLP Engineer",
-        "Natural Language Processing Engineer",
-        "Conversational AI Engineer",
-        "Speech Engineer",
-    ],
-    "cv_engineer": [
-        "Computer Vision Engineer",
-        "CV Engineer",
-        "Vision AI Engineer",
-    ],
-    "data_scientist": [
-        "Data Scientist",
-        "Applied Scientist",
-        "Research Scientist",
-        "ML Scientist",
+        "Data Architect",
+        "Data Integration Engineer",
+        "Data Warehouse Engineer",
+        "Cloud Data Engineer",
+        "Senior Data Engineer",
+        "Staff Data Engineer",
+        "Lead Data Engineer",
     ],
 }
 
@@ -61,25 +36,16 @@ for titles in ROLE_CATEGORIES.values():
     JOB_TITLES.extend(titles)
 
 # Reduced list for JobSpy (LinkedIn) — each title takes ~1 min, run in parallel.
-# Keep one representative per role cluster to avoid duplicate results and stay
-# well within the 60-min workflow timeout.
+# Data Engineering titles only.
 JOBSPY_TITLES: list = [
-    # Data Engineering
     "Data Engineer",
     "ETL Engineer",
     "Analytics Engineer",
-    # AI / Generative AI
-    "AI Engineer",
-    "LLM Engineer",
-    "Generative AI Engineer",
-    # ML / MLOps
-    "Machine Learning Engineer",
-    "MLOps Engineer",
-    # NLP / CV
-    "NLP Engineer",
-    "Computer Vision Engineer",
-    # Data Science
-    "Data Scientist",
+    "Data Platform Engineer",
+    "Data Infrastructure Engineer",
+    "Big Data Engineer",
+    "Data Warehouse Engineer",
+    "Cloud Data Engineer",
 ]
 
 # ── Search Parameters ──────────────────────────────────────────────────────────
@@ -101,14 +67,21 @@ INCLUDE_KEYWORDS = [
     "data pipeline", "ETL", "Spark", "Kafka", "Airflow", "dbt", "SQL",
     "Python", "cloud", "AWS", "GCP", "Azure", "data warehouse", "Snowflake",
     "Databricks", "BigQuery", "Redshift", "Flink", "Beam", "Hive",
-    "TensorFlow", "PyTorch", "scikit-learn", "LLM", "GPT", "transformer",
-    "MLflow", "Kubeflow", "Ray", "Kubernetes", "Docker",
-    "machine learning", "deep learning", "neural network",
+    "Kubernetes", "Docker", "data lake", "data lakehouse", "Delta Lake",
+    "data modeling", "data orchestration", "data integration",
 ]
 
 EXCLUDE_KEYWORDS = [
-    "unpaid", "10+ years", "15+ years", "principal engineer",
-    "staff engineer", "VP of", "Vice President",
+    # Seniority / role type
+    "unpaid", "10+ years", "15+ years", "VP of", "Vice President",
+    # ML / AI / Data Science titles to exclude from results
+    "machine learning engineer", "ml engineer", "mlops engineer",
+    "ml platform engineer", "applied ml engineer", "deep learning engineer",
+    "ai engineer", "artificial intelligence engineer", "llm engineer",
+    "generative ai engineer", "prompt engineer", "ai/ml engineer",
+    "nlp engineer", "natural language processing", "conversational ai",
+    "computer vision engineer", "vision ai engineer",
+    "data scientist", "applied scientist", "research scientist", "ml scientist",
 ]
 
 # ── Dream Companies ────────────────────────────────────────────────────────────
@@ -128,7 +101,7 @@ GMAIL_APP_PASSWORD  = os.getenv("GMAIL_APP_PASSWORD", "")
 ALERT_RECIPIENT     = "reddamgufus21188@gmail.com"
 
 # ── Google Sheets ──────────────────────────────────────────────────────────────
-GOOGLE_SHEET_NAME              = "Data Engineer Job Search 2025"
+GOOGLE_SHEET_NAME              = "Data Engineering Job Search 2025"
 GOOGLE_SERVICE_ACCOUNT_JSON    = os.getenv("GOOGLE_SERVICE_ACCOUNT_JSON", "service_account.json")
 
 # ── Supabase ───────────────────────────────────────────────────────────────────
@@ -160,6 +133,29 @@ RESUME_PATH = os.getenv("RESUME_PATH", "")
 ENABLE_HN_SCRAPER        = True   # Hacker News Who's Hiring thread
 ENABLE_SKILL_GAP         = True   # Run skill gap analysis after each run
 ENABLE_COVER_LETTER      = False  # Auto-generate cover letters (requires LLM)
+
+# ── Recruiter Discovery ────────────────────────────────────────────────────────
+# Set to True to run recruiter discovery after each scrape cycle.
+# Discovery runs asynchronously so it does NOT block the main pipeline.
+ENABLE_RECRUITER_DISCOVERY = True
+
+# Minimum confidence score (0–100) to persist a recruiter link
+RECRUITER_MIN_CONFIDENCE = 30
+
+# Thread-pool workers for async recruiter discovery
+# Lower = fewer simultaneous DuckDuckGo requests (less chance of blocking)
+RECRUITER_WORKERS = 3
+
+# Maximum number of jobs to run recruiter discovery on per pipeline run.
+# Top-scored jobs are prioritised. Set to 0 to disable the cap.
+RECRUITER_MAX_JOBS = 50
+
+# ── Outreach Generator ────────────────────────────────────────────────────────
+# Set to True to automatically generate personalized outreach messages
+# for discovered recruiters.
+ENABLE_OUTREACH_GENERATOR = True
+OUTREACH_TONE = "professional, confident"
+
 
 # ── Database (SQLite fallback when Supabase not configured) ────────────────────
 DB_PATH = os.path.join(os.path.dirname(__file__), "jobs.db")
