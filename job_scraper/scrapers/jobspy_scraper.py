@@ -59,7 +59,7 @@ class JobSpyScraper:
 
         try:
             df = scrape_jobs(
-                site_name=["linkedin"],
+                site_name=["linkedin", "google"],
                 search_term=title,
                 location="United States",
                 results_wanted=50,

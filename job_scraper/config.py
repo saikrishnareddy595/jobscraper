@@ -51,9 +51,9 @@ JOBSPY_TITLES: list = [
 # ── Search Parameters ──────────────────────────────────────────────────────────
 LOCATIONS = ["United States", "Remote USA", "Remote"]
 
-MIN_SALARY      = 80_000   # USD / year
-MAX_JOB_AGE_HOURS = 168
-MAX_APPLICANTS  = 100      # filter out saturated postings
+MIN_SALARY        = 80_000   # USD / year
+MAX_JOB_AGE_HOURS = 24       # delta-sync jobs from the past 24 hours
+MAX_APPLICANTS    = 100      # filter out saturated postings
 
 EASY_APPLY_ONLY = False    # include all application types
 
@@ -120,6 +120,12 @@ ADZUNA_APP_ID   = os.getenv("ADZUNA_APP_ID", "")
 ADZUNA_APP_KEY  = os.getenv("ADZUNA_APP_KEY", "")
 JOOBLE_API_KEY  = os.getenv("JOOBLE_API_KEY", "")
 USAJOBS_API_KEY = os.getenv("USAJOBS_API_KEY", "")    # free at usajobs.gov
+
+# ── Direct API Scrape Targets (Delta-Sync) ──────────────────────────────────────
+WORKDAY_COMPANIES = ["nvidia", "adobe", "capitalone", "dell", "salesforce"]
+GREENHOUSE_COMPANIES = ["airbnb", "stripe", "doordash", "figma", "reddit", "lyft"]
+AMAZON_SCRAPE_ENABLED = True
+
 
 # ── LinkedIn (for posts scraping) ──────────────────────────────────────────────
 LINKEDIN_EMAIL    = os.getenv("LINKEDIN_EMAIL", "")

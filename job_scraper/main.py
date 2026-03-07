@@ -61,6 +61,7 @@ from scrapers.usajobs        import USAJobsScraper
 from scrapers.staffing_scrapers import BeaconHillScraper
 from scrapers.linkedin_posts import LinkedInPostsScraper
 from scrapers.hackernews     import HackerNewsHiringScraper
+from scrapers.direct_api_scraper import WorkdayScraper, GreenhouseScraper, AmazonDirectScraper
 
 from engine.deduplicator import Deduplicator
 from engine.scorer       import Scorer
@@ -115,8 +116,18 @@ def _build_tasks() -> List[Tuple[str, object]]:
     ]
 
     # ── Phase 2: Hacker News Who’s Hiring ───────────────────────────────────
-    if config.ENABLE_HN_SCRAPER:
+    if getattr(config, "ENABLE_HN_SCRAPER", False):
         tasks.append(("HackerNews", HackerNewsHiringScraper()))
+
+    # ── Direct API (Delta-Sync) ────────────────────────────────────────────────
+    if getattr(config, "AMAZON_SCRAPE_ENABLED", False):
+        tasks.append(("Amazon API", AmazonDirectScraper()))
+        
+    for company in getattr(config, "WORKDAY_COMPANIES", []):
+        tasks.append((f"Workday:{company}", WorkdayScraper(company)))
+        
+    for token in getattr(config, "GREENHOUSE_COMPANIES", []):
+        tasks.append((f"Greenhouse:{token}", GreenhouseScraper(token)))
 
     return tasks
 
