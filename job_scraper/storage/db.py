@@ -42,6 +42,41 @@ CREATE TABLE IF NOT EXISTS jobs (
 CREATE INDEX IF NOT EXISTS idx_score      ON jobs(score);
 CREATE INDEX IF NOT EXISTS idx_scraped_at ON jobs(scraped_at);
 CREATE INDEX IF NOT EXISTS idx_notified   ON jobs(notified);
+
+CREATE TABLE IF NOT EXISTS linkedin_posts (
+    id                  INTEGER PRIMARY KEY AUTOINCREMENT,
+    post_text           TEXT,
+    author_name         TEXT,
+    author_headline     TEXT,
+    author_profile_url  TEXT,
+    extracted_title     TEXT,
+    extracted_company   TEXT,
+    contact_email       TEXT,
+    contact_linkedin    TEXT,
+    contact_name        TEXT,
+    post_url            TEXT UNIQUE,
+    posted_date         TEXT,
+    scraped_at          TEXT,
+    is_job_posting      INTEGER DEFAULT 1,
+    score               INTEGER DEFAULT 0,
+    role_category       TEXT
+);
+
+CREATE TABLE IF NOT EXISTS recruiters (
+    id              INTEGER PRIMARY KEY AUTOINCREMENT,
+    fingerprint     TEXT UNIQUE NOT NULL,
+    name            TEXT NOT NULL,
+    title           TEXT,
+    company         TEXT,
+    linkedin_url    TEXT,
+    email           TEXT,
+    location        TEXT,
+    source          TEXT DEFAULT 'linkedin_search',
+    job_url         TEXT,
+    confidence_score INTEGER DEFAULT 0,
+    created_at      TEXT,
+    updated_at      TEXT
+);
 """
 
 
@@ -128,6 +163,91 @@ class Database:
 
         conn.commit()
         return len(jobs)
+
+    def upsert_posts(self, posts: List[Dict[str, Any]]) -> int:
+        conn = self._connect()
+        for p in posts:
+            posted = p.get("posted_date")
+            if isinstance(posted, datetime):
+                posted = posted.isoformat()
+            try:
+                conn.execute(
+                    """
+                    INSERT INTO linkedin_posts (
+                        post_text, author_name, author_headline, author_profile_url,
+                        extracted_title, extracted_company, contact_email,
+                        contact_linkedin, contact_name, post_url,
+                        posted_date, scraped_at, is_job_posting, score, role_category
+                    ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+                    ON CONFLICT(post_url) DO UPDATE SET
+                        score           = excluded.score,
+                        extracted_title = excluded.extracted_title,
+                        extracted_company = excluded.extracted_company,
+                        post_text       = excluded.post_text
+                    """,
+                    (
+                        self._str(p.get("post_text", "")),
+                        self._str(p.get("author_name", "")),
+                        self._str(p.get("author_headline", "")),
+                        self._str(p.get("author_profile_url", "")),
+                        self._str(p.get("extracted_title", "")),
+                        self._str(p.get("extracted_company", "")),
+                        self._str(p.get("contact_email", "")),
+                        self._str(p.get("contact_linkedin", "")),
+                        self._str(p.get("contact_name", "")),
+                        p.get("post_url", ""),
+                        posted,
+                        datetime.now(timezone.utc).isoformat(),
+                        1 if p.get("is_job_posting") else 0,
+                        p.get("score", 0),
+                        self._str(p.get("role_category", ""))
+                    )
+                )
+            except Exception as exc:
+                logger.warning("DB upsert error for post '%s': %s", p.get("post_url"), exc)
+        conn.commit()
+        return len(posts)
+
+    def upsert_recruiters(self, recruiters: List[Dict[str, Any]]) -> int:
+        conn = self._connect()
+        now = datetime.now(timezone.utc).isoformat()
+        count = 0
+        for r in recruiters:
+            fingerprint = r.get("fingerprint")
+            if not fingerprint:
+                continue
+            try:
+                conn.execute(
+                    """
+                    INSERT INTO recruiters (
+                        fingerprint, name, title, company, linkedin_url,
+                        email, location, source, job_url, confidence_score,
+                        created_at, updated_at
+                    ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)
+                    ON CONFLICT(fingerprint) DO UPDATE SET
+                        confidence_score = MAX(recruiters.confidence_score, excluded.confidence_score),
+                        updated_at       = excluded.updated_at
+                    """,
+                    (
+                        fingerprint,
+                        self._str(r.get("name", "")),
+                        self._str(r.get("title", "")),
+                        self._str(r.get("company", "")),
+                        self._str(r.get("linkedin_url", "")),
+                        self._str(r.get("email", "")),
+                        self._str(r.get("location", "")),
+                        self._str(r.get("source", "linkedin_search")),
+                        self._str(r.get("job_url", "")),
+                        r.get("confidence_score", 0),
+                        now,
+                        now
+                    )
+                )
+                count += 1
+            except Exception as exc:
+                logger.warning("DB upsert error for recruiter '%s': %s", fingerprint, exc)
+        conn.commit()
+        return count
 
     def get_unnotified(self, min_score: int = 0) -> List[Dict[str, Any]]:
         conn = self._connect()

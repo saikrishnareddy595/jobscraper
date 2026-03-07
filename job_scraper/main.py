@@ -232,8 +232,33 @@ def run() -> None:
     if config.LINKEDIN_EMAIL:
         logger.info("Scraping LinkedIn posts …")
         posts = LinkedInPostsScraper().scrape()
+        # Save to SQLite local database
+        db.upsert_posts(posts)
+        # Push to Supabase remote
         supabase.upsert_posts(posts)
-        logger.info("LinkedIn Posts: %d posts pushed to Supabase", len(posts))
+        logger.info("LinkedIn Posts: %d collected and pushed to storage", len(posts))
+
+    # ── Step 9.5: Deliver Recruiter Outreach Emails ────────────────────────────
+    if config.GMAIL_APP_PASSWORD and getattr(config, "ENABLE_OUTREACH_GENERATOR", False):
+        try:
+            import sqlite3
+            conn = sqlite3.connect(config.DB_PATH)
+            conn.row_factory = sqlite3.Row
+            rows = conn.execute("SELECT * FROM outreach_messages WHERE status='generated' AND message_type IN ('recruiter_email', 'follow_up_message')").fetchall()
+            conn.close()
+            
+            outreach_dicts = [dict(r) for r in rows]
+            if outreach_dicts:
+                sent = Notifier().send_outreach_emails(outreach_dicts)
+                logger.info("Delivered %d outreach emails.", sent)
+                # optionally update status
+                if sent > 0:
+                    conn = sqlite3.connect(config.DB_PATH)
+                    conn.execute("UPDATE outreach_messages SET status='sent' WHERE status='generated' AND message_type IN ('recruiter_email', 'follow_up_message')")
+                    conn.commit()
+                    conn.close()
+        except Exception as e:
+            logger.error("Error delivering outreach emails: %s", e)
 
     # ── Step 10: Excel Export ─────────────────────────────────────────────────
     excel_path: str = ""

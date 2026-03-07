@@ -172,7 +172,15 @@ class ExcelExporter:
             wb, jobs, recruiter_map, Font, PatternFill, Alignment, get_column_letter
         )
         
-        # ----- Sheet 5: Outreach Messages -----
+        # ----- Sheet 5: LinkedIn Posts -----
+        try:
+            self._build_linkedin_posts_sheet(
+                wb, sqlite3, Font, PatternFill, Alignment, get_column_letter
+            )
+        except Exception as e:
+            logger.warning(f"Failed to build LinkedIn posts Excel sheet: {e}")
+            
+        # ----- Sheet 6: Outreach Messages -----
         self._build_outreach_sheet(
             wb, sqlite3, Font, PatternFill, Alignment, get_column_letter
         )
@@ -504,3 +512,54 @@ class ExcelExporter:
                 result.append({**rec, "job_url": job_url})
         result.sort(key=lambda r: r.get("confidence_score", 0), reverse=True)
         return result
+
+    def _build_linkedin_posts_sheet(self, wb, sqlite3, Font, PatternFill, Alignment, get_column_letter):
+        ws = wb.create_sheet("LinkedIn Post Leads")
+        headers = [
+            "Score", "Extracted Title", "Extracted Company", "Author Name", "Headline",
+            "Contact Email", "Contact LinkedIn", "Post Text", "Post URL", "Role Category", "Date Scraped"
+        ]
+        self._write_header(ws, headers, Font, PatternFill, Alignment)
+        
+        import config
+        try:
+            conn = sqlite3.connect(config.DB_PATH)
+            conn.row_factory = sqlite3.Row
+            rows = conn.execute("SELECT * FROM linkedin_posts ORDER BY score DESC, scraped_at DESC LIMIT 500").fetchall()
+            conn.close()
+        except:
+            rows = []
+            
+        for i, row in enumerate(rows, start=2):
+            row_bg = _C_ROW_EVEN if i % 2 == 0 else _C_ROW_ALT
+            cells = [
+                row["score"],
+                row["extracted_title"],
+                row["extracted_company"],
+                row["author_name"],
+                row["author_headline"],
+                row["contact_email"],
+                row["contact_linkedin"],
+                row["post_text"][:2000] if row["post_text"] else "",
+                row["post_url"],
+                row["role_category"],
+                row["scraped_at"]
+            ]
+            ws.append(cells)
+            for col_idx, cell in enumerate(ws[i], start=1):
+                if col_idx == 1:
+                    self._fill_cell(cell, PatternFill, _score_colour(row["score"]))
+                else:
+                    self._fill_cell(cell, PatternFill, row_bg)
+                cell.alignment = Alignment(wrap_text=True if col_idx == 8 else False, vertical="center")
+                
+            # Links
+            url_cell = ws.cell(row=i, column=9)
+            if row["post_url"]:
+                url_cell.hyperlink = row["post_url"]
+                url_cell.font = Font(color=_C_URL, underline="single")
+                url_cell.value = "View Post →"
+                
+        self._autofit(ws, get_column_letter, max_width=45)
+        ws.column_dimensions[get_column_letter(8)].width = 75
+        ws.freeze_panes = "A2"

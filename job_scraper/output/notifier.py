@@ -65,6 +65,51 @@ class Notifier:
             logger.error("Email send error: %s", exc)
             return False
 
+    def send_outreach_emails(self, outreach_messages: List[Dict[str, Any]]) -> int:
+        """
+        Actually send outreach emails via Gmail SMTP to recruiters.
+        Returns the number of successful sends.
+        """
+        if not config.GMAIL_APP_PASSWORD:
+            logger.warning("Notifier: GMAIL_APP_PASSWORD not set — skipping outreach delivery")
+            return 0
+
+        emails_to_send = [msg for msg in outreach_messages if msg.get("message_type") in ("recruiter_email", "follow_up_message")]
+        if not emails_to_send:
+            return 0
+
+        sent_count = 0
+        try:
+            with smtplib.SMTP_SSL("smtp.gmail.com", 465) as server:
+                server.login(config.GMAIL_ADDRESS, config.GMAIL_APP_PASSWORD)
+                
+                for msg in emails_to_send:
+                    # In a real scenario, you'd fetch the recruiter's email.
+                    # For this, we'll send it to the ALERT_RECIPIENT as a proxy to avoid spamming actual recruiters.
+                    # Or if 'to_email' is present in msg, we'd use that.
+                    to_email = msg.get("to_email", config.ALERT_RECIPIENT)
+                    
+                    mime_msg = MIMEMultipart("alternative")
+                    mime_msg["Subject"] = msg.get("subject", "Following up")
+                    mime_msg["From"]    = config.GMAIL_ADDRESS
+                    mime_msg["To"]      = to_email
+                    
+                    body_text = msg.get("body", "")
+                    mime_msg.attach(MIMEText(body_text, "plain"))
+                    
+                    server.sendmail(config.GMAIL_ADDRESS, to_email, mime_msg.as_string())
+                    sent_count += 1
+                    logger.info("Outreach: Email sent to %s for job_id %s", to_email, msg.get("job_id"))
+                    
+            return sent_count
+            
+        except smtplib.SMTPAuthenticationError as exc:
+            logger.error("Outreach: Gmail auth failed: %s", exc)
+            return sent_count
+        except Exception as exc:
+            logger.error("Outreach: Email send array error: %s", exc)
+            return sent_count
+
     # ------------------------------------------------------------------
     @staticmethod
     def _build_html(jobs: List[Dict[str, Any]], total: int) -> str:
