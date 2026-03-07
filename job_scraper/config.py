@@ -52,7 +52,7 @@ JOBSPY_TITLES: list = [
 LOCATIONS = ["United States", "Remote USA", "Remote"]
 
 MIN_SALARY        = 80_000   # USD / year
-MAX_JOB_AGE_HOURS = 72       # sync jobs from the past 72 hours (3 days)
+MAX_JOB_AGE_HOURS = 24       # delta-sync jobs from the past 24 hours
 MAX_APPLICANTS    = 100      # filter out saturated postings
 
 EASY_APPLY_ONLY = False    # include all application types
@@ -101,8 +101,11 @@ GMAIL_APP_PASSWORD  = os.getenv("GMAIL_APP_PASSWORD", "")
 ALERT_RECIPIENT     = os.getenv("ALERT_RECIPIENT", os.getenv("GMAIL_ADDRESS", ""))
 
 # ── Google Sheets ──────────────────────────────────────────────────────────────
+# Set GOOGLE_SPREADSHEET_ID to enable Sheets sync; leave empty to skip.
+GOOGLE_SPREADSHEET_ID          = os.getenv("GOOGLE_SPREADSHEET_ID", "")
 GOOGLE_SHEET_NAME              = "Data Engineering Job Search 2025"
 GOOGLE_SERVICE_ACCOUNT_JSON    = os.getenv("GOOGLE_SERVICE_ACCOUNT_JSON", "service_account.json")
+ENABLE_GOOGLE_SHEETS           = bool(GOOGLE_SPREADSHEET_ID)
 
 # ── Supabase ───────────────────────────────────────────────────────────────────
 SUPABASE_URL         = os.getenv("SUPABASE_URL", "")

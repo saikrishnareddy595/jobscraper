@@ -34,6 +34,9 @@ class SheetsSync:
         """Lazy-connect to Google Sheets."""
         if self._gc is not None:
             return True
+        if not config.ENABLE_GOOGLE_SHEETS:
+            logger.info("Google Sheets sync disabled (GOOGLE_SPREADSHEET_ID not set)")
+            return False
         try:
             import gspread
             from google.oauth2.service_account import Credentials
