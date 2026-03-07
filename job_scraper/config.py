@@ -122,8 +122,8 @@ JOOBLE_API_KEY  = os.getenv("JOOBLE_API_KEY", "")
 USAJOBS_API_KEY = os.getenv("USAJOBS_API_KEY", "")    # free at usajobs.gov
 
 # ── Direct API Scrape Targets (Delta-Sync) ──────────────────────────────────────
-WORKDAY_COMPANIES = ["nvidia", "adobe", "capitalone", "dell", "salesforce"]
-GREENHOUSE_COMPANIES = ["airbnb", "stripe", "doordash", "figma", "reddit", "lyft"]
+WORKDAY_COMPANIES = []  # Disabled: Workday CXS API requires a per-tenant board name not known at config time
+GREENHOUSE_COMPANIES = ["airbnb", "stripe", "figma", "reddit", "lyft"]  # doordash removed (404)
 AMAZON_SCRAPE_ENABLED = True
 
 

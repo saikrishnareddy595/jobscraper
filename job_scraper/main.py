@@ -58,7 +58,6 @@ from scrapers.jooble         import JoobleScraper
 from scrapers.workingnomads  import WorkingNomadsScraper
 from scrapers.weworkremotely import WeWorkRemotelyScraper
 from scrapers.usajobs        import USAJobsScraper
-from scrapers.staffing_scrapers import BeaconHillScraper
 from scrapers.linkedin_posts import LinkedInPostsScraper
 from scrapers.hackernews     import HackerNewsHiringScraper
 from scrapers.direct_api_scraper import WorkdayScraper, GreenhouseScraper, AmazonDirectScraper
@@ -122,7 +121,6 @@ def _build_tasks() -> List[Tuple[str, object]]:
         ("Adzuna",         AdzunaScraper()),
         ("WeWorkRemotely", WeWorkRemotelyScraper()),
         ("Jooble",         JoobleScraper()),
-        ("BeaconHill",     BeaconHillScraper()),
     ]
 
     # ── Phase 2: Hacker News Who’s Hiring ───────────────────────────────────
