@@ -101,8 +101,11 @@ GMAIL_APP_PASSWORD  = os.getenv("GMAIL_APP_PASSWORD", "")
 ALERT_RECIPIENT     = os.getenv("ALERT_RECIPIENT", os.getenv("GMAIL_ADDRESS", ""))
 
 # ── Google Sheets ──────────────────────────────────────────────────────────────
+# Set GOOGLE_SPREADSHEET_ID to enable Sheets sync; leave empty to skip.
+GOOGLE_SPREADSHEET_ID          = os.getenv("GOOGLE_SPREADSHEET_ID", "")
 GOOGLE_SHEET_NAME              = "Data Engineering Job Search 2025"
 GOOGLE_SERVICE_ACCOUNT_JSON    = os.getenv("GOOGLE_SERVICE_ACCOUNT_JSON", "service_account.json")
+ENABLE_GOOGLE_SHEETS           = bool(GOOGLE_SPREADSHEET_ID)
 
 # ── Supabase ───────────────────────────────────────────────────────────────────
 SUPABASE_URL         = os.getenv("SUPABASE_URL", "")
@@ -110,8 +113,8 @@ SUPABASE_SERVICE_KEY = os.getenv("SUPABASE_SERVICE_KEY", "")
 
 # ── NVIDIA NIM ─────────────────────────────────────────────────────────────────
 NVIDIA_API_KEY       = os.getenv("NVIDIA_API_KEY", "")
-NVIDIA_BASE_URL      = "https://ai.api.nvidia.com/v1"
-NVIDIA_CHAT_MODEL    = "nvidia/llama-3.1-8b-instruct"
+NVIDIA_BASE_URL      = "https://integrate.api.nvidia.com/v1"
+NVIDIA_CHAT_MODEL    = "meta/llama-3.1-8b-instruct"
 NVIDIA_EMBED_MODEL   = "nvidia/nv-embedqa-e5-v5"
 LLM_ENABLED          = bool(NVIDIA_API_KEY)   # auto-disable if no key
 
@@ -122,8 +125,8 @@ JOOBLE_API_KEY  = os.getenv("JOOBLE_API_KEY", "")
 USAJOBS_API_KEY = os.getenv("USAJOBS_API_KEY", "")    # free at usajobs.gov
 
 # ── Direct API Scrape Targets (Delta-Sync) ──────────────────────────────────────
-WORKDAY_COMPANIES = ["nvidia", "adobe", "capitalone", "dell", "salesforce"]
-GREENHOUSE_COMPANIES = ["airbnb", "stripe", "doordash", "figma", "reddit", "lyft"]
+WORKDAY_COMPANIES = []  # Disabled: Workday CXS API requires a per-tenant board name not known at config time
+GREENHOUSE_COMPANIES = ["airbnb", "stripe", "figma", "reddit", "lyft"]  # doordash removed (404)
 AMAZON_SCRAPE_ENABLED = True
 
 
