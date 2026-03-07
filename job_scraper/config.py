@@ -52,7 +52,7 @@ JOBSPY_TITLES: list = [
 LOCATIONS = ["United States", "Remote USA", "Remote"]
 
 MIN_SALARY        = 80_000   # USD / year
-MAX_JOB_AGE_HOURS = 24       # delta-sync jobs from the past 24 hours
+MAX_JOB_AGE_HOURS = 72       # sync jobs from the past 72 hours (3 days)
 MAX_APPLICANTS    = 100      # filter out saturated postings
 
 EASY_APPLY_ONLY = False    # include all application types
@@ -110,8 +110,8 @@ SUPABASE_SERVICE_KEY = os.getenv("SUPABASE_SERVICE_KEY", "")
 
 # ── NVIDIA NIM ─────────────────────────────────────────────────────────────────
 NVIDIA_API_KEY       = os.getenv("NVIDIA_API_KEY", "")
-NVIDIA_BASE_URL      = "https://ai.api.nvidia.com/v1"
-NVIDIA_CHAT_MODEL    = "nvidia/llama-3.1-8b-instruct"
+NVIDIA_BASE_URL      = "https://integrate.api.nvidia.com/v1"
+NVIDIA_CHAT_MODEL    = "meta/llama-3.1-8b-instruct"
 NVIDIA_EMBED_MODEL   = "nvidia/nv-embedqa-e5-v5"
 LLM_ENABLED          = bool(NVIDIA_API_KEY)   # auto-disable if no key
 
