@@ -37,6 +37,7 @@ export interface Job {
   notes?: string | null;
   applied: boolean;
   saved: boolean;
+  visa_sponsorship?: boolean | null; // true=sponsors, false=no, null=unknown
 }
 
 // A LinkedIn post scraped by the Python pipeline
@@ -67,6 +68,7 @@ export interface Filters {
   minScore: number;
   remoteOnly: boolean;
   easyApplyOnly: boolean;
+  visaFilter: "all" | "sponsors" | "no_sponsorship";
   search: string;
   sortBy: "score" | "date" | "salary";
 }

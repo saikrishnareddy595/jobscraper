@@ -32,13 +32,10 @@ class Deduplicator:
                 self._seen[key] = job
             else:
                 existing = self._seen[key]
-                # Prefer richer record
-                if existing.get("salary") is None and job.get("salary") is not None:
-                    self._seen[key] = {**job, **{k: v for k, v in existing.items() if v is not None}}
-                if existing.get("easy_apply") is None and job.get("easy_apply") is not None:
-                    self._seen[key]["easy_apply"] = job["easy_apply"]
-                if existing.get("description") is None and job.get("description"):
-                    self._seen[key]["description"] = job["description"]
+                # Prefer richer record: fill in any None fields from the new job
+                for field in ("salary", "easy_apply", "description", "applicants", "llm_score", "skills"):
+                    if self._seen[key].get(field) is None and job.get(field) is not None:
+                        self._seen[key][field] = job[field]
 
         after_exact = list(self._seen.values())
         logger.info("Dedup pass-1 (exact): %d → %d", len(jobs), len(after_exact))

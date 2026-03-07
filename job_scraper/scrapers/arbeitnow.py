@@ -80,10 +80,15 @@ class ArbeitnowScraper:
         if not title:
             return {}
 
+        # Arbeitnow is primarily a European job board — only keep truly remote jobs
+        # so non-US office locations don't slip through.
+        remote = item.get("remote", False)
+        if not remote:
+            return {}
+
         company  = item.get("company_name", "")
         location = item.get("location", "Remote")
         url      = item.get("url", "")
-        remote   = item.get("remote", False)
         tags     = item.get("tags", [])
         desc     = (item.get("description", "") or "")[:500]
 
@@ -96,7 +101,7 @@ class ArbeitnowScraper:
         except Exception:
             posted_date = datetime.now(timezone.utc)
 
-        if remote and not location:
+        if not location:
             location = "Remote"
 
         return {
