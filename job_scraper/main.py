@@ -79,15 +79,25 @@ from output.notifier         import Notifier
 from output.excel_export     import ExcelExporter
 
 
-def _run_scraper(name: str, scraper_instance) -> Tuple[str, List[Dict[str, Any]]]:
-    """Thread-safe wrapper: runs scraper.scrape() and returns (name, jobs)."""
-    try:
-        jobs = scraper_instance.scrape()
-        logger.info("  ✓ %-25s %d jobs", name, len(jobs))
-        return name, jobs
-    except Exception as exc:
-        logger.error("  ✗ %-25s FAILED: %s", name, exc)
-        return name, []
+def _run_scraper(name: str, scraper_instance, max_retries: int = 2) -> Tuple[str, List[Dict[str, Any]]]:
+    """Thread-safe wrapper: runs scraper.scrape() with exponential backoff retries."""
+    delay = 2
+    for attempt in range(max_retries + 1):
+        try:
+            jobs = scraper_instance.scrape()
+            logger.info("  ✓ %-25s %d jobs", name, len(jobs))
+            return name, jobs
+        except Exception as exc:
+            if attempt < max_retries:
+                logger.warning(
+                    "  ↻ %-25s attempt %d/%d failed (%s) — retrying in %ds",
+                    name, attempt + 1, max_retries + 1, exc, delay,
+                )
+                time.sleep(delay)
+                delay *= 2
+            else:
+                logger.error("  ✗ %-25s FAILED after %d attempts: %s", name, max_retries + 1, exc)
+    return name, []
 
 
 def _build_tasks() -> List[Tuple[str, object]]:
@@ -139,6 +149,18 @@ def run() -> None:
     logger.info("LLM enabled: %s | Supabase: %s", config.LLM_ENABLED, bool(config.SUPABASE_URL))
     logger.info("=" * 65)
 
+    # ── Feature availability log ───────────────────────────────────────────────
+    if not config.NVIDIA_API_KEY:
+        logger.info("Feature DISABLED: LLM enrichment (set NVIDIA_API_KEY to enable)")
+    if not config.SUPABASE_URL:
+        logger.info("Feature DISABLED: Supabase sync (set SUPABASE_URL + SUPABASE_SERVICE_KEY to enable)")
+    if not config.GMAIL_ADDRESS or not config.GMAIL_APP_PASSWORD:
+        logger.info("Feature DISABLED: Gmail digest (set GMAIL_ADDRESS + GMAIL_APP_PASSWORD to enable)")
+    if not config.GOOGLE_SERVICE_ACCOUNT_JSON or not os.path.exists(config.GOOGLE_SERVICE_ACCOUNT_JSON):
+        logger.info("Feature DISABLED: Google Sheets sync (set GOOGLE_SERVICE_ACCOUNT_JSON to enable)")
+    if not config.LINKEDIN_EMAIL:
+        logger.info("Feature DISABLED: LinkedIn Posts scraping (set LINKEDIN_EMAIL + LINKEDIN_PASSWORD to enable)")
+
     supabase = SupabaseClient()
 
     # ── Step 1: Parallel scraping ──────────────────────────────────────────────
@@ -173,6 +195,13 @@ def run() -> None:
     # ── Step 5: LLM Enrichment (NVIDIA NIM) ──────────────────────────────────
     if config.LLM_ENABLED:
         scored_jobs = llm_score_batch(scored_jobs, max_jobs=500)
+        # Blend LLM score (60%) with heuristic score (40%) so the combined
+        # score is used for sorting, email threshold, and Sheets filtering.
+        for job in scored_jobs:
+            llm = job.get("llm_score")
+            if llm is not None:
+                blended = int(0.4 * job.get("score", 0) + 0.6 * llm)
+                job["score"] = min(blended, 100)
 
     # ── Step 6: Recruiter Discovery (async, non-blocking) ───────────────────
     recruiter_counts: dict = {}

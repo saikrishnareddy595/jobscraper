@@ -201,9 +201,15 @@ class JobSpyScraper:
         applicants = None
         num_app = row.get("num_applicants")
         if not is_missing(num_app):
-            m = re.search(r"\d+", str(num_app))
+            num_app_str = str(num_app).strip().lower()
+            m = re.search(r"\d+", num_app_str)
             if m:
-                applicants = int(m.group())
+                parsed = int(m.group())
+                # "Over 200" / "200+" means at least that many — treat as 2× to avoid
+                # under-filtering saturated postings
+                if "over" in num_app_str or "+" in num_app_str:
+                    parsed = parsed * 2
+                applicants = parsed
 
         return {
             "title":       job_title,

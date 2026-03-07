@@ -96,9 +96,9 @@ DREAM_COMPANIES = [
 ALERT_SCORE_THRESHOLD = 50   # jobs at or above this score go to email/sheets
 
 # ── Gmail / Alerts ─────────────────────────────────────────────────────────────
-GMAIL_ADDRESS       = os.getenv("GMAIL_ADDRESS", "reddamgufus21188@gmail.com")
+GMAIL_ADDRESS       = os.getenv("GMAIL_ADDRESS", "")
 GMAIL_APP_PASSWORD  = os.getenv("GMAIL_APP_PASSWORD", "")
-ALERT_RECIPIENT     = "reddamgufus21188@gmail.com"
+ALERT_RECIPIENT     = os.getenv("ALERT_RECIPIENT", os.getenv("GMAIL_ADDRESS", ""))
 
 # ── Google Sheets ──────────────────────────────────────────────────────────────
 GOOGLE_SHEET_NAME              = "Data Engineering Job Search 2025"

@@ -47,9 +47,13 @@ def llm_score_job(job: Dict[str, Any]) -> Tuple[Optional[int], Optional[str], Op
     title    = job.get("title", "")
     company  = job.get("company", "")
     location = job.get("location", "")
-    desc     = (job.get("description") or "")[:800]
     salary   = job.get("salary")
     job_type = job.get("job_type", "")
+
+    # Sanitize description to prevent prompt injection: strip control characters
+    # and any text that tries to override instructions
+    raw_desc = (job.get("description") or "")[:800]
+    desc = re.sub(r"[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]", "", raw_desc)  # strip control chars
 
     prompt = f"""You are a job relevance evaluator for a Data Engineer / AI Engineer job seeker.
 

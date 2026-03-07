@@ -30,9 +30,22 @@ def parse_resume(path: Optional[str] = None) -> Dict[str, Any]:
     Falls back to an empty profile if path not set or file not found.
     """
     path = path or getattr(config, "RESUME_PATH", "")
-    if not path or not os.path.exists(path):
-        logger.info("Resume: no file at '%s' — using empty profile", path)
+    if not path:
+        logger.info("Resume: RESUME_PATH not set — using empty profile")
         return _empty_profile()
+
+    # Resolve to absolute path and validate it stays within expected boundaries
+    abs_path = os.path.abspath(path)
+    allowed_dir = os.path.abspath(os.path.dirname(__file__) + "/../..")
+    if not abs_path.startswith(allowed_dir) and not os.path.isabs(path):
+        logger.warning("Resume: path '%s' is outside allowed directory — rejected", path)
+        return _empty_profile()
+
+    if not os.path.exists(abs_path):
+        logger.info("Resume: no file at '%s' — using empty profile", abs_path)
+        return _empty_profile()
+
+    path = abs_path
 
     ext = os.path.splitext(path)[1].lower()
     try:

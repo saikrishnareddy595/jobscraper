@@ -277,7 +277,7 @@ class Database:
         if d.get("skills"):
             try:
                 d["skills"] = json.loads(d["skills"])
-            except:
+            except Exception:
                 d["skills"] = []
         return d
 
