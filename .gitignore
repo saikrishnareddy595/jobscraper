@@ -16,6 +16,8 @@ eggs/
 .eggs/
 lib/
 lib64/
+# Exception: Next.js source lib/ is not a Python artifact
+!website/lib/
 parts/
 sdist/
 var/
