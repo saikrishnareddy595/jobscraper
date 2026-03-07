@@ -7,9 +7,11 @@ Rules enforced:
   3. Posted more than MAX_JOB_AGE_HOURS ago
   4. Applicants > MAX_APPLICANTS (if known and EASY_APPLY_ONLY = False still filters saturated)
   5. Easy-apply only mode (if EASY_APPLY_ONLY = True)
+  6. Location is outside USA / Remote (non-US country explicitly detected)
 """
 
 import logging
+import re
 from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, List, Optional
 
@@ -18,6 +20,43 @@ import config
 logger = logging.getLogger(__name__)
 
 _EXCLUDE_LOWER = [kw.lower() for kw in config.EXCLUDE_KEYWORDS]
+
+# ── USA / Remote location filter ───────────────────────────────────────────────
+# Patterns that confirm the job IS in the USA or remote-friendly for US workers.
+_USA_OK_RE = re.compile(
+    r"\b(usa?|united states?|remote|anywhere|worldwide|north america|global)\b",
+    re.IGNORECASE,
+)
+
+# Explicit non-US country signals — reject when detected (and no US signal present).
+_NON_USA_RE = re.compile(
+    r"\b("
+    r"uk|united kingdom|england|scotland|wales|ireland|northern ireland"
+    r"|germany|deutschland|france|spain|portugal|italy|netherlands|belgium"
+    r"|sweden|norway|denmark|finland|switzerland|austria|poland|czech"
+    r"|romania|hungary|ukraine|russia|turkey"
+    r"|india|pakistan|bangladesh|sri lanka|nepal"
+    r"|australia|new zealand"
+    r"|canada|mexico|brazil|argentina|colombia|chile|peru"
+    r"|singapore|malaysia|philippines|indonesia|vietnam|thailand|japan|china|taiwan|korea|hong kong"
+    r"|south africa|nigeria|kenya|ghana|egypt|israel|uae|dubai|saudi"
+    r")\b",
+    re.IGNORECASE,
+)
+
+
+def _is_us_or_remote(location: str) -> bool:
+    """Return True if the location is USA, Remote, or unknown (empty / None).
+    Returns False only when a clearly non-US country is detected without any US signal.
+    """
+    if not location:
+        return True  # unknown location — pass through, other filters may handle it
+    loc = location.strip()
+    if _USA_OK_RE.search(loc):
+        return True
+    if _NON_USA_RE.search(loc):
+        return False
+    return True  # ambiguous — pass through
 
 # ── Visa sponsorship keywords ───────────────────────────────────────────────────────
 # Positive signals: job description explicitly mentions visa sponsorship
@@ -150,6 +189,11 @@ class Filter:
         # 0b) Hard reject: title has no DE keyword at all (pure irrelevant role)
         if not any(kw in title_lower for kw in _DE_TITLE_KEYWORDS):
             return "title does not match any data engineering pattern"
+
+        # 0c) Location must be USA or Remote
+        location = job.get("location") or ""
+        if not _is_us_or_remote(location):
+            return f"non-US location: {location}"
 
         # 1) Salary check (only when explicitly known)
         salary = job.get("salary")

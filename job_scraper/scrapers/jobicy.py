@@ -15,7 +15,7 @@ class JobicyScraper(BaseAPIScraper):
     def scrape(self) -> List[Dict[str, Any]]:
         for tag in self._TAGS:
             try:
-                r = self._session.get(self._URL, params={"tag": tag, "count": 50}, timeout=15)
+                r = self._session.get(self._URL, params={"tag": tag, "count": 50, "geo": "usa"}, timeout=15)
                 r.raise_for_status()
                 for item in r.json().get("jobs", []):
                     job = self._parse(item)
