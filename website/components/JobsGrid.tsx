@@ -1,6 +1,6 @@
 "use client";
 
-import { Job, Filters } from "@/lib/types";
+import { Job, Filters, JobType } from "@/lib/types";
 import JobCard from "./JobCard";
 
 interface Props {
@@ -17,7 +17,7 @@ export default function JobsGrid({ jobs, filters, onApplied, onSaved }: Props) {
       return false;
     if (
       filters.jobTypes.length > 0 &&
-      !filters.jobTypes.includes(job.job_type)
+      !filters.jobTypes.includes(job.job_type as JobType)
     )
       return false;
     if (job.score < filters.minScore) return false;
