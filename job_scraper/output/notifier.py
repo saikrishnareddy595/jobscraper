@@ -3,6 +3,7 @@ Gmail notifier — sends an HTML digest email with top 10 scored jobs.
 Uses smtplib + SSL (port 465) with a Gmail App Password.
 """
 
+import html as html_module
 import logging
 import smtplib
 from datetime import datetime
@@ -27,6 +28,10 @@ class Notifier:
 
         if not config.GMAIL_APP_PASSWORD:
             logger.warning("Notifier: GMAIL_APP_PASSWORD not set — skipping email")
+            return False
+
+        if not config.GMAIL_ADDRESS or not config.ALERT_RECIPIENT:
+            logger.warning("Notifier: GMAIL_ADDRESS or ALERT_RECIPIENT not set — skipping email")
             return False
 
         top_jobs = sorted(jobs, key=lambda j: j.get("score", 0), reverse=True)[:10]
@@ -131,23 +136,30 @@ class Notifier:
             score = job.get("score", 0)
             score_color = "#22c55e" if score >= 65 else ("#f59e0b" if score >= 40 else "#ef4444")
 
-            url = job.get("url", "#")
+            # Sanitize user-controlled fields before inserting into HTML
+            raw_url = job.get("url") or "#"
+            # Only allow http/https URLs to prevent javascript: URI injection
+            safe_url = raw_url if raw_url.startswith(("http://", "https://")) else "#"
+            title_escaped   = html_module.escape(str(job.get("title", "")))
+            company_escaped = html_module.escape(str(job.get("company", "")))
+            location_escaped = html_module.escape(str(job.get("location", "")))
+            posted_escaped  = html_module.escape(str(posted))
 
             rows += f"""
             <tr style="border-bottom:1px solid #e5e7eb;">
               <td style="padding:12px 8px;font-weight:600;color:#1e293b;">#{i}</td>
               <td style="padding:12px 8px;">
-                <a href="{url}" style="color:#2563eb;text-decoration:none;font-weight:600;">{job.get('title','')}</a>
-                <br><small style="color:#6b7280;">{job.get('company','')} · {job.get('location','')}</small>
+                <a href="{safe_url}" style="color:#2563eb;text-decoration:none;font-weight:600;">{title_escaped}</a>
+                <br><small style="color:#6b7280;">{company_escaped} · {location_escaped}</small>
                 <br>{easy_badge}
               </td>
               <td style="padding:12px 8px;text-align:center;">
                 <span style="background:{score_color};color:#fff;padding:3px 8px;border-radius:12px;font-weight:700;">{score}</span>
               </td>
               <td style="padding:12px 8px;color:#059669;font-weight:600;">{salary_str}</td>
-              <td style="padding:12px 8px;color:#6b7280;font-size:13px;">{posted}</td>
+              <td style="padding:12px 8px;color:#6b7280;font-size:13px;">{posted_escaped}</td>
               <td style="padding:12px 8px;">
-                <a href="{url}" style="background:#2563eb;color:#fff;padding:6px 12px;border-radius:6px;text-decoration:none;font-size:13px;">Apply</a>
+                <a href="{safe_url}" style="background:#2563eb;color:#fff;padding:6px 12px;border-radius:6px;text-decoration:none;font-size:13px;">Apply</a>
               </td>
             </tr>
             """
