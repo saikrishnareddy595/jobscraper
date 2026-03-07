@@ -4,7 +4,7 @@ import { useEffect, useState, useCallback } from "react";
 import { Job, LinkedInPost, Filters } from "@/lib/types";
 import StatsBar from "@/components/StatsBar";
 import FilterSidebar from "@/components/FilterSidebar";
-import JobsGrid from "@/components/JobsGrid";
+import JobsGrid, { SkeletonCard } from "@/components/JobsGrid";
 import LinkedInPosts from "@/components/LinkedInPosts";
 import AnalyticsPage from "@/components/AnalyticsPage";
 import KanbanBoard from "@/components/KanbanBoard";
@@ -19,26 +19,52 @@ const DEFAULT_FILTERS: Filters = {
   minScore: 0,
   remoteOnly: false,
   easyApplyOnly: false,
+  visaFilter: "all",
   search: "",
   sortBy: "score",
 };
 
+const FILTERS_STORAGE_KEY = "jobscraper_filters_v2";
+
+function loadFilters(): Filters {
+  if (typeof window === "undefined") return DEFAULT_FILTERS;
+  try {
+    const raw = localStorage.getItem(FILTERS_STORAGE_KEY);
+    if (!raw) return DEFAULT_FILTERS;
+    return { ...DEFAULT_FILTERS, ...JSON.parse(raw) };
+  } catch {
+    return DEFAULT_FILTERS;
+  }
+}
+
+function saveFilters(f: Filters) {
+  try { localStorage.setItem(FILTERS_STORAGE_KEY, JSON.stringify(f)); } catch { /* noop */ }
+}
+
 const TABS: { id: Tab; label: string; icon: string }[] = [
-  { id: "jobs",      label: "All Jobs",   icon: "◈" },
-  { id: "posts",     label: "Recruiters", icon: "◉" },
-  { id: "analytics", label: "Analytics",  icon: "◎" },
-  { id: "kanban",    label: "Pipeline",   icon: "▤" },
-  { id: "saved",     label: "Saved",      icon: "♥" },
-  { id: "applied",   label: "Applied",    icon: "✓" },
+  { id: "jobs",       label: "All Jobs",   icon: "◈" },
+  { id: "posts",      label: "Recruiters", icon: "◉" },
+  { id: "analytics",  label: "Analytics",  icon: "◎" },
+  { id: "kanban",     label: "Pipeline",   icon: "▤" },
+  { id: "saved",      label: "Saved",      icon: "♥" },
+  { id: "applied",    label: "Applied",    icon: "✓" },
 ];
 
 export default function Home() {
   const [jobs, setJobs]               = useState<Job[]>([]);
   const [posts, setPosts]             = useState<LinkedInPost[]>([]);
-  const [filters, setFilters]         = useState<Filters>(DEFAULT_FILTERS);
+  const [filters, setFiltersState]    = useState<Filters>(DEFAULT_FILTERS);
   const [activeTab, setActiveTab]     = useState<Tab>("jobs");
   const [loading, setLoading]         = useState(true);
   const [lastUpdated, setLastUpdated] = useState<string>("");
+
+  // Load persisted filters on mount
+  useEffect(() => { setFiltersState(loadFilters()); }, []);
+
+  const setFilters = useCallback((f: Filters) => {
+    setFiltersState(f);
+    saveFilters(f);
+  }, []);
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -49,7 +75,7 @@ export default function Home() {
       ]);
       const jobsData: Job[]           = await jobsRes.json();
       const postsData: LinkedInPost[] = await postsRes.json();
-      setJobs(Array.isArray(jobsData) ? jobsData : []);
+      setJobs(Array.isArray(jobsData)  ? jobsData  : []);
       setPosts(Array.isArray(postsData) ? postsData : []);
       setLastUpdated(new Date().toLocaleTimeString());
     } catch (err) {
@@ -98,7 +124,7 @@ export default function Home() {
       <div className="orb orb-3" />
 
       <main className="relative min-h-screen z-10">
-        {/* ── Premium header ──────────────────────────────────────────── */}
+        {/* ── Premium header ──────────────────────────────────── */}
         <header className="sticky top-0 z-30 glass-strong border-b border-slate-700/50">
           <div className="max-w-screen-2xl mx-auto px-6 py-4">
             <div className="flex items-center justify-between gap-4">
@@ -120,9 +146,7 @@ export default function Home() {
                   </h1>
                   <p className="text-[11px] text-slate-500 mt-1">
                     {jobs.length} jobs &middot; {posts.length} recruiters
-                    {postsWithEmail > 0 && (
-                      <span className="text-amber-400"> &middot; {postsWithEmail} emails</span>
-                    )}
+                    {postsWithEmail > 0 && <span className="text-amber-400"> &middot; {postsWithEmail} emails</span>}
                     {lastUpdated && <span> &middot; {lastUpdated}</span>}
                   </p>
                 </div>
@@ -136,16 +160,11 @@ export default function Home() {
                   title="Refresh data"
                   className="flex items-center gap-2 px-3.5 py-2 rounded-xl glass border border-slate-700/50 hover:border-slate-600 text-slate-300 hover:text-white text-sm font-medium transition-all disabled:opacity-40"
                 >
-                  <svg
-                    className={`w-4 h-4 ${loading ? "animate-spin" : ""}`}
-                    fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}
-                  >
+                  <svg className={`w-4 h-4 ${loading ? "animate-spin" : ""}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                     <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
                   </svg>
                   <span className="hidden sm:inline">Refresh</span>
                 </button>
-
-                {/* ★ GitHub Actions trigger button */}
                 <div className="w-60">
                   <WorkflowTrigger />
                 </div>
@@ -162,34 +181,28 @@ export default function Home() {
           {/* Tabs */}
           <div className="flex flex-wrap gap-1 glass border border-slate-700/50 p-1 rounded-2xl w-fit">
             {TABS.map((tab) => {
-              const count   = tabCount(tab.id);
-              const active  = activeTab === tab.id;
+              const count    = tabCount(tab.id);
+              const active   = activeTab === tab.id;
               const hasAlert = tab.id === "posts" && postsWithEmail > 0;
               return (
                 <button
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id)}
-                  className={`
-                    relative px-4 py-2 rounded-xl text-sm font-medium transition-all duration-200
-                    ${active
+                  className={`relative px-4 py-2 rounded-xl text-sm font-medium transition-all duration-200 ${
+                    active
                       ? "bg-gradient-to-r from-sky-600 to-indigo-600 text-white shadow-lg shadow-blue-500/20"
                       : "text-slate-400 hover:text-slate-200 hover:bg-slate-800/60"
-                    }
-                  `}
+                  }`}
                 >
                   <span className="flex items-center gap-1.5">
                     <span className="text-[12px] opacity-70">{tab.icon}</span>
                     {tab.label}
                     {count !== undefined && count > 0 && (
-                      <span className={`
-                        text-[10px] px-1.5 py-0.5 rounded-full font-semibold
-                        ${active
-                          ? "bg-white/20 text-white"
-                          : hasAlert
-                            ? "bg-amber-500/20 text-amber-400 blink"
-                            : "bg-slate-700 text-slate-400"
-                        }
-                      `}>
+                      <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-semibold ${
+                        active ? "bg-white/20 text-white"
+                        : hasAlert ? "bg-amber-500/20 text-amber-400 blink"
+                        : "bg-slate-700 text-slate-400"
+                      }`}>
                         {count}
                       </span>
                     )}
@@ -199,7 +212,7 @@ export default function Home() {
             })}
           </div>
 
-          {/* Main content */}
+          {/* Content */}
           {activeTab === "posts" ? (
             <LinkedInPosts posts={posts} />
           ) : activeTab === "analytics" ? (
@@ -213,9 +226,11 @@ export default function Home() {
               )}
               <div className="flex-1 min-w-0">
                 {loading && jobs.length === 0 ? (
-                  <div className="flex flex-col items-center justify-center py-24 text-slate-500 gap-4">
-                    <div className="w-10 h-10 border-2 border-sky-500 border-t-transparent rounded-full animate-spin" />
-                    <p className="text-sm">Loading jobs…</p>
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between mb-1">
+                      <div className="h-3 w-24 shimmer rounded" />
+                    </div>
+                    {[...Array(5)].map((_, i) => <SkeletonCard key={i} />)}
                   </div>
                 ) : (
                   <JobsGrid

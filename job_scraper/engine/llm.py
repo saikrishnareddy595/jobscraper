@@ -50,20 +50,25 @@ def llm_score_job(job: Dict[str, Any]) -> Tuple[Optional[int], Optional[str], Op
     salary   = job.get("salary")
     job_type = job.get("job_type", "")
 
-    # Sanitize description to prevent prompt injection: strip control characters
-    # and any text that tries to override instructions
+    # Sanitize description — use json.dumps to safely escape all special chars
+    # preventing prompt injection via quotes, braces, or control characters
     raw_desc = (job.get("description") or "")[:800]
-    desc = re.sub(r"[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]", "", raw_desc)  # strip control chars
+    raw_desc = re.sub(r"[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]", "", raw_desc)
+
+    # Build job data dict and serialize safely — no f-string interpolation of user data
+    job_block = "\n".join([
+        f"Title: {json.dumps(str(title))}",
+        f"Company: {json.dumps(str(company))}",
+        f"Location: {json.dumps(str(location))}",
+        f"Type: {json.dumps(str(job_type))}",
+        f"Salary: {json.dumps(str(salary) if salary else 'not listed')}",
+        f"Description: {json.dumps(raw_desc)}",
+    ])
 
     prompt = f"""You are a job relevance evaluator for a Data Engineer / AI Engineer job seeker.
 
 JOB:
-Title: {title}
-Company: {company}
-Location: {location}
-Type: {job_type}
-Salary: {salary if salary else 'not listed'}
-Description: {desc}
+{job_block}
 
 Respond ONLY with valid JSON (no markdown):
 {{

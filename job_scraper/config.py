@@ -175,6 +175,8 @@ REQUEST_DELAY_MAX  = 3.5
 HEADLESS_BROWSER   = True
 PLAYWRIGHT_TIMEOUT = 30_000   # ms
 MAX_WORKERS        = 8        # parallel scraper threads
+# HTTP request timeout for individual scraper calls (configurable via env var)
+SCRAPER_TIMEOUT_SEC = int(os.getenv("SCRAPER_TIMEOUT_SEC", "15"))
 
 # ── Logging ────────────────────────────────────────────────────────────────────
 LOG_LEVEL = "INFO"

@@ -157,8 +157,10 @@ class Scorer:
                 pass
 
         # ── 8. Dream company ──────────────────────────────────────────
+        # Word-boundary check prevents "Amazon" from matching "AmazingCorp"
+        import re as _re
         company_lower = _to_str(job.get("company")).lower()
-        if any(dream in company_lower for dream in _DREAM_LOWER):
+        if any(_re.search(r'\b' + _re.escape(dream) + r'\b', company_lower) for dream in _DREAM_LOWER):
             points += 15
 
         return min(points, 100)

@@ -92,7 +92,8 @@ export default function WorkflowTrigger() {
     (latestRun.status === "in_progress" ||
       latestRun.status === "queued" ||
       latestRun.status === "waiting" ||
-      latestRun.status === "requested");
+      latestRun.status === "requested" ||
+      latestRun.status === "pending");
 
   const trigger = async () => {
     setTriggering(true);
